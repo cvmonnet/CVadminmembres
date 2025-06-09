@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accueil - CVadmin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: #fff;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background-color: rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    .btn {
+      padding: 10px 20px;
+      background-color: #3498db;
+      border: none;
+      color: white;
+      font-weight: bold;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background-color: #2980b9;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: calc(100vh - 80px);
+      gap: 20px;
+    }
+
+    .class-button {
+      width: 250px;
+      text-align: center;
+      padding: 20px;
+      border-radius: 12px;
+      background-color: #ffffff15;
+      color: white;
+      font-size: 1.2rem;
+      font-weight: 600;
+      backdrop-filter: blur(6px);
+      transition: transform 0.2s, background-color 0.3s;
+      text-decoration: none;
+    }
+
+    .class-button:hover {
+      background-color: #3498db;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="#" class="btn" onclick="modifierClasses()">Modifier</a>
+    <a href="#" class="btn" onclick="deconnexion()">Déconnexion</a>
+  </header>
+
+  <main>
+    <a href="classe.html" class="class-button" id="classe">G1</a>
+    <a href="classe2.html" class="class-button" id="classe2">G2</a>
+    <a href="classe3.html" class="class-button" id="classe3">CVnews</a>
+    <a href="emploidutemps.html" class="class-button" id="Plannig">Plannig</a>
+  </main>
+
+  <script>
+    function modifierClasses() {
+      const newClass1 = prompt("Nom de la première classe (CVnews) :", document.getElementById('classe').textContent);
+      const newClass2 = prompt("Nom de la deuxième classe (G1) :", document.getElementById('classe2').textContent);
+      const newClass3 = prompt("Nom de la troisième classe (G2) :", document.getElementById('classe3').textContent);
+
+      if (newClass1) document.getElementById('classe').textContent = newClass1;
+      if (newClass2) document.getElementById('classe2').textContent = newClass2;
+      if (newClass3) document.getElementById('classe3').textContent = newClass3;
+    }
+
+    function deconnexion() {
+      localStorage.clear(); // Facultatif
+      window.location.href = 'index.html';
+    }
+  </script>
+</body>
+</html>

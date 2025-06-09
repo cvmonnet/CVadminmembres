@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Historique - Classe 2</title>
+  <style>
+    body { font-family: Arial; background: #f4f4f4; margin: 0; padding: 0; }
+    header {
+      background-color: #004080; color: white; padding: 15px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .container { padding: 20px; max-width: 1000px; margin: auto; }
+    table {
+      width: 100%; border-collapse: collapse; background: white;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ccc; padding: 8px; text-align: center;
+    }
+    th { background: #004080; color: white; }
+    input[type="text"], input[type="date"] {
+      padding: 6px;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+    button {
+      background: #004080; color: white; padding: 8px 12px;
+      border: none; border-radius: 4px; cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #0066cc; }
+    .top-buttons {
+      display: flex; gap: 10px; margin-bottom: 15px;
+    }
+    .justifie-checkbox {
+      width: 20px; height: 20px;
+      cursor: pointer;
+    }
+    .trash-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: #cc0000;
+    }
+    .trash-btn:hover {
+      color: #ff3333;
+    }
+    #filtres {
+      margin-bottom: 15px;
+    }
+    #resumeStats {
+      margin-top: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      max-width: 500px;
+    }
+    #resumeStats h3 {
+      margin-top: 0;
+      color: #004080;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top-buttons">
+      <button onclick="window.location.href='accueil.html'">🏠 Accueil</button>
+      <button onclick="window.location.href='classe2.html'">👩‍🏫 Classe</button>
+      <button onclick="window.location.href='presence2.html'">📋 Appel</button>
+    </div>
+    <h2>Historique - Classe 2</h2>
+  </header>
+
+  <div class="container">
+    <div>
+      <button onclick="supprimerTout()">Supprimer tout</button>
+      <button onclick="genererPDF()">Sauvegarder en PDF</button>
+    </div>
+
+    <div id="filtres">
+      <label for="filtreDate">Filtrer par date :</label>
+      <input type="date" id="filtreDate" onchange="filtrer()" />
+      
+      <label for="filtreNom">Filtrer par nom :</label>
+      <input type="text" id="filtreNom" placeholder="Saisir nom d'élève" oninput="filtrer()" />
+      
+      <button onclick="reinitialiserFiltres()">Réinitialiser</button>
+    </div>
+
+    <table id="tableHistorique">
+      <thead>
+        <tr>
+          <th>Élève</th>
+          <th>Date</th>
+          <th>Horaire</th>
+          <th>Statut</th>
+          <th>Motif</th>
+          <th>Justifié</th>
+          <th>Supprimer</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div id="resumeStats" style="display:none;">
+      <h3>Résumé pour l'élève <span id="nomResume"></span></h3>
+      <ul>
+        <li>Présences : <span id="pctPresence">0%</span></li>
+        <li>Absences : <span id="pctAbsence">0%</span></li>
+        <li>Absences justifiées : <span id="pctJustifie">0%</span></li>
+        <li>Absences non justifiées : <span id="pctNonJustifie">0%</span></li>
+        <li>Retards : <span id="pctRetard">0%</span></li>
+        <li>Exclusions : <span id="pctExclusion">0%</span></li>
+      </ul>
+    </div>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+<script>
+  const { jsPDF } = window.jspdf;
+
+  let appels = JSON.parse(localStorage.getItem('appels2')) || [];
+
+  function trierAppels() {
+    appels.sort((a,b) => {
+      if (a.date < b.date) return 1;
+      if (a.date > b.date) return -1;
+      const horaireA = a.horaire.replace(/[^\d]/g, '');
+      const horaireB = b.horaire.replace(/[^\d]/g, '');
+      return horaireB - horaireA;
+    });
+  }
+
+  function afficherHistorique(listeAppels = null) {
+    trierAppels();
+    const tbody = document.querySelector('#tableHistorique tbody');
+    tbody.innerHTML = '';
+
+    let data = listeAppels || appels;
+
+    data.forEach((appel, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${appel.nom}</td>
+        <td>${appel.date}</td>
+        <td>${appel.horaire}</td>
+        <td>${appel.statut}</td>
+        <td><input type="text" value="${appel.motif || ''}" onchange="modifierMotif(${i}, this.value)" /></td>
+        <td><input type="checkbox" class="justifie-checkbox" ${appel.justifie ? 'checked' : ''} onchange="modifierJustifie(${i}, this.checked)" /></td>
+        <td><button class="trash-btn" title="Supprimer" onclick="supprimerAppel(${i})">🗑️</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const filtreNom = document.getElementById('filtreNom').value.trim().toLowerCase();
+    if (filtreNom && !document.getElementById('filtreDate').value) {
+      afficherResumeStats(filtreNom, data);
+    } else {
+      document.getElementById('resumeStats').style.display = 'none';
+    }
+  }
+
+  function modifierMotif(index, valeur) {
+    appels[index].motif = valeur;
+    enregistrer();
+  }
+
+  function modifierJustifie(index, checked) {
+    appels[index].justifie = checked;
+    enregistrer();
+  }
+
+  function supprimerAppel(index) {
+    if (confirm(`Supprimer l'appel de ${appels[index].nom} du ${appels[index].date} ?`)) {
+      appels.splice(index,1);
+      enregistrer();
+      filtrer();
+    }
+  }
+
+  function supprimerTout() {
+    if (confirm("Supprimer tout l'historique ? Cette action est irréversible.")) {
+      appels = [];
+      enregistrer();
+      afficherHistorique();
+      document.getElementById('resumeStats').style.display = 'none';
+    }
+  }
+
+  function enregistrer() {
+    localStorage.setItem('appels2', JSON.stringify(appels));
+  }
+
+  function filtrer() {
+    const filtreDate = document.getElementById('filtreDate').value;
+    const filtreNom = document.getElementById('filtreNom').value.trim().toLowerCase();
+
+    let filtreAppele = appels;
+
+    if(filtreDate) {
+      filtreAppele = filtreAppele.filter(a => a.date === filtreDate);
+    }
+
+    if(filtreNom) {
+      filtreAppele = filtreAppele.filter(a => a.nom.toLowerCase().includes(filtreNom));
+    }
+
+    afficherHistorique(filtreAppele);
+  }
+
+  function reinitialiserFiltres() {
+    document.getElementById('filtreDate').value = '';
+    document.getElementById('filtreNom').value = '';
+    afficherHistorique();
+    document.getElementById('resumeStats').style.display = 'none';
+  }
+
+  function afficherResumeStats(nomEleve, data) {
+    const appelsEleve = data.filter(a => a.nom.toLowerCase() === nomEleve);
+
+    if(appelsEleve.length === 0) {
+      document.getElementById('resumeStats').style.display = 'none';
+      return;
+    }
+
+    const total = appelsEleve.length;
+
+    let presences = 0;
+    let absences = 0;
+    let justifiees = 0;
+    let nonJustifiees = 0;
+    let retards = 0;
+    let exclusions = 0;
+
+    appelsEleve.forEach(a => {
+      if(a.statut === 'Présent') presences++;
+      else if(a.statut === 'Absent') {
+        absences++;
+        if(a.justifie) justifiees++;
+        else nonJustifiees++;
+      }
+      else if(a.statut === 'Retard') retards++;
+      else if(a.statut === 'Exclusion') exclusions++;
+    });
+
+    function pct(val) {
+      return total === 0 ? '0%' : Math.round((val / total) * 100) + '%';
+    }
+
+    document.getElementById('nomResume').textContent = appelsEleve[0].nom;
+    document.getElementById('pctPresence').textContent = pct(presences);
+    document.getElementById('pctAbsence').textContent = pct(absences);
+    document.getElementById('pctJustifie').textContent = pct(justifiees);
+    document.getElementById('pctNonJustifie').textContent = pct(nonJustifiees);
+    document.getElementById('pctRetard').textContent = pct(retards);
+    document.getElementById('pctExclusion').textContent = pct(exclusions);
+
+    document.getElementById('resumeStats').style.display = 'block';
+  }
+
+  function genererPDF() {
+    const doc = new jsPDF();
+    const colonnes = ["Élève", "Date", "Horaire", "Statut", "Motif", "Justifié"];
+
+    const rows = [];
+    document.querySelectorAll('#tableHistorique tbody tr').forEach(tr => {
+      const cols = tr.querySelectorAll('td');
+      rows.push([
+        cols[0].textContent,
+        cols[1].textContent,
+        cols[2].textContent,
+        cols[3].textContent,
+        cols[4].querySelector('input').value,
+        cols[5].querySelector('input').checked ? 'Oui' : 'Non',
+      ]);
+    });
+
+    doc.setFontSize(16);
+    doc.text("Historique de présence - Classe 2", 14, 20);
+
+    doc.autoTable({
+      startY: 30,
+      head: [colonnes],
+      body: rows,
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [0, 64, 128] },
+      alternateRowStyles: { fillColor: [240, 240, 240] }
+    });
+
+    doc.save("historique_classe2.pdf");
+  }
+
+  afficherHistorique();
+</script>
+</body>
+</html>

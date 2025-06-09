@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Présence - Classe 1</title>
+  <style>
+    body { font-family: Arial; background: #f4f4f4; margin: 0; padding: 0; }
+    header {
+      background-color: #004080; color: white; padding: 15px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .container { padding: 20px; max-width: 900px; margin: auto; }
+    .eleves { display: flex; flex-direction: column; gap: 10px; }
+    .eleve {
+      background: white; padding: 10px; border-radius: 5px;
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: default;
+    }
+    select {
+      padding: 5px;
+    }
+    button {
+      background: #004080; color: white; padding: 8px 12px;
+      border: none; border-radius: 4px; cursor: pointer;
+    }
+    button:hover { background: #0066cc; }
+    .top-buttons {
+      display: flex; gap: 10px; align-items: center;
+      margin-bottom: 10px;
+    }
+    label { margin-right: 5px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top-buttons">
+      <button onclick="window.location.href='accueil.html'">🏠 Accueil</button>
+      <button onclick="window.location.href='classe.html'">👩‍🏫 Classe</button>
+      <button onclick="window.location.href='historique.html'">🕒 Historique</button>
+    </div>
+    <h2>Présence - Classe 1</h2>
+  </header>
+
+  <div class="container">
+    <div>
+      <label for="dateAppel">Date :</label>
+      <input type="date" id="dateAppel" />
+      <label for="horaireAppel">Horaire (ex: 13h-14h) :</label>
+      <input type="text" id="horaireAppel" placeholder="13h-14h" />
+      <button onclick="appel()">Enregistrer l'appel</button>
+    </div>
+    <div id="elevesList" class="eleves"></div>
+  </div>
+
+<script>
+  let eleves = JSON.parse(localStorage.getItem('classe1')) || [];
+  let appels = JSON.parse(localStorage.getItem('appels')) || [];
+  let presenceCourante = {}; // { nomEleve: statut }
+
+  function enregistrerAppels() {
+    localStorage.setItem('appels', JSON.stringify(appels));
+  }
+
+  function afficherListe() {
+    const container = document.getElementById('elevesList');
+    container.innerHTML = '';
+    eleves.forEach(eleve => {
+      const div = document.createElement('div');
+      div.className = 'eleve';
+      const statut = presenceCourante[eleve.nom] || 'Présent';
+      div.innerHTML = `
+        <span>${eleve.nom}</span>
+        <select onchange="changerStatut('${eleve.nom}', this.value)">
+          <option value="Présent" ${statut==='Présent' ? 'selected' : ''}>Présent</option>
+          <option value="Absent" ${statut==='Absent' ? 'selected' : ''}>Absent</option>
+          <option value="Retard" ${statut==='Retard' ? 'selected' : ''}>Retard</option>
+          <option value="Exclusion" ${statut==='Exclusion' ? 'selected' : ''}>Exclusion</option>
+        </select>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function changerStatut(nom, statut) {
+    presenceCourante[nom] = statut;
+  }
+
+  function appel() {
+    const date = document.getElementById('dateAppel').value;
+    const horaire = document.getElementById('horaireAppel').value.trim();
+    if (!date || !horaire) {
+      alert('Veuillez saisir la date et l\'horaire.');
+      return;
+    }
+    for(let eleve of eleves) {
+      const statut = presenceCourante[eleve.nom] || 'Présent';
+      appels.push({
+        nom: eleve.nom,
+        date,
+        horaire,
+        statut,
+        motif: '',
+        justifie: false
+      });
+    }
+    enregistrerAppels();
+    alert('Appel enregistré.');
+    presenceCourante = {};
+    afficherListe();
+  }
+
+  afficherListe();
+</script>
+</body>
+</html>

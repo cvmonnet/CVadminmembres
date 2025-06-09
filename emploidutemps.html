@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Emploi du Temps</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f4f7fa;
+      color: #333;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: none;
+      background-color: #3498db;
+      color: white;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    .form-group {
+      margin-bottom: 10px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .reunions-list {
+      margin-top: 20px;
+    }
+
+    .reunion {
+      background: white;
+      border-left: 5px solid #3498db;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .reunion-info {
+      max-width: 85%;
+    }
+
+    .delete-btn {
+      background: #e74c3c;
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 6px 10px;
+    }
+
+    .delete-btn:hover {
+      background: #c0392b;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <button onclick="window.location.href='accueil.html'">🏠 Accueil</button>
+  </div>
+  <div>
+    <button onclick="sauvegarderReunions()">💾 Sauvegarder</button>
+  </div>
+</header>
+
+<h2>Créer une réunion</h2>
+<div id="formulaire">
+  <div class="form-group">
+    <label for="date">Date :</label>
+    <input type="date" id="date">
+  </div>
+  <div class="form-group">
+    <label for="heureDebut">Heure de début :</label>
+    <input type="time" id="heureDebut">
+  </div>
+  <div class="form-group">
+    <label for="heureFin">Heure de fin :</label>
+    <input type="time" id="heureFin">
+  </div>
+  <div class="form-group">
+    <label for="classe">Classe :</label>
+    <input type="text" id="classe" placeholder="Ex: G1, CVnews...">
+  </div>
+  <div class="form-group">
+    <label for="commentaire">Commentaire :</label>
+    <textarea id="commentaire" rows="2" placeholder="Détails de la réunion..."></textarea>
+  </div>
+  <button onclick="ajouterReunion()">➕ Ajouter la réunion</button>
+</div>
+
+<h2>Voir les réunions par date</h2>
+<div class="form-group">
+  <label for="date-filtre">Sélectionner une date :</label>
+  <input type="date" id="date-filtre" onchange="afficherReunions()">
+</div>
+
+<div class="reunions-list" id="liste-reunions"></div>
+
+<script>
+  let reunions = JSON.parse(localStorage.getItem("reunions") || "[]");
+
+  function ajouterReunion() {
+    const date = document.getElementById('date').value;
+    const heureDebut = document.getElementById('heureDebut').value;
+    const heureFin = document.getElementById('heureFin').value;
+    const classe = document.getElementById('classe').value;
+    const commentaire = document.getElementById('commentaire').value;
+
+    if (!date || !heureDebut || !heureFin || !classe) {
+      alert("Merci de remplir tous les champs requis.");
+      return;
+    }
+
+    reunions.push({ date, heureDebut, heureFin, classe, commentaire });
+    alert("Réunion ajoutée !");
+    afficherReunions();
+  }
+
+  function afficherReunions() {
+    const filtre = document.getElementById('date-filtre').value;
+    const conteneur = document.getElementById('liste-reunions');
+    conteneur.innerHTML = "";
+
+    const reunionsFiltrees = reunions
+      .filter(r => r.date === filtre)
+      .sort((a, b) => a.heureDebut.localeCompare(b.heureDebut));
+
+    if (reunionsFiltrees.length === 0) {
+      conteneur.innerHTML = "<p>Aucune réunion pour cette date.</p>";
+      return;
+    }
+
+    reunionsFiltrees.forEach((r, index) => {
+      const div = document.createElement("div");
+      div.className = "reunion";
+
+      const info = document.createElement("div");
+      info.className = "reunion-info";
+      info.innerHTML = `<strong>${r.heureDebut} → ${r.heureFin}</strong> - ${r.classe}<br>${r.commentaire}`;
+
+      const bouton = document.createElement("button");
+      bouton.className = "delete-btn";
+      bouton.innerHTML = "🗑️";
+      bouton.onclick = () => {
+        const i = reunions.findIndex(reu => reu.date === r.date && reu.heureDebut === r.heureDebut && reu.heureFin === r.heureFin && reu.classe === r.classe && reu.commentaire === r.commentaire);
+        if (i > -1) {
+          reunions.splice(i, 1);
+          afficherReunions();
+        }
+      };
+
+      div.appendChild(info);
+      div.appendChild(bouton);
+      conteneur.appendChild(div);
+    });
+  }
+
+  function sauvegarderReunions() {
+    localStorage.setItem("reunions", JSON.stringify(reunions));
+    alert("Réunions sauvegardées !");
+  }
+</script>
+
+</body>
+</html>
+
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Classe 3 - Gestion Élèves</title>
+  <style>
+    body { font-family: Arial; background: #f4f4f4; margin: 0; padding: 0; }
+    header {
+      background-color: #004080; color: white; padding: 15px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .container { padding: 20px; max-width: 900px; margin: auto; }
+    .eleves { display: flex; flex-direction: column; gap: 10px; }
+    .eleve {
+      background: white; padding: 10px; border-radius: 5px;
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer;
+    }
+    .details {
+      background: white; padding: 20px; border-radius: 8px; margin-top: 20px;
+      display: none;
+    }
+    button {
+      background: #004080; color: white; padding: 8px 12px;
+      border: none; border-radius: 4px; cursor: pointer;
+    }
+    button:hover { background: #0066cc; }
+    input, select, textarea {
+      margin: 5px 0; padding: 5px; width: 100%; box-sizing: border-box;
+    }
+    #absencesNonJustifiees {
+      background: #eef3fb; padding: 15px; border-radius: 8px; margin-top: 20px;
+      max-height: 300px; overflow-y: auto;
+    }
+    .top-buttons {
+      display: flex; gap: 10px; align-items: center;
+    }
+    label { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top-buttons">
+      <button onclick="window.location.href='accueil.html'">🏠 Accueil</button>
+      <button onclick="window.location.href='presence3.html'">📋 Appel</button>
+      <button onclick="window.location.href='historique3.html'">🕒 Historique</button>
+    </div>
+    <h2>Classe 3</h2>
+    <button onclick="ajouterEleve()">+ Ajouter</button>
+  </header>
+
+  <div class="container">
+    <div id="elevesList" class="eleves"></div>
+
+    <div id="details" class="details">
+      <h3 id="eleveNom"></h3>
+
+      <label for="commentaire">Commentaire :</label>
+      <textarea id="commentaire" rows="3"></textarea>
+
+      <h4>Absences / Retards non justifiés :</h4>
+      <div id="absencesNonJustifiees"></div>
+
+      <div id="justificationForm" style="display:none; margin-top:10px;">
+        <label>Date de justification :</label>
+        <input type="date" id="dateJustif" />
+        <label>Motif de justification :</label>
+        <input type="text" id="motifJustif" placeholder="Ex: Maladie" />
+        <button onclick="enregistrerJustification()">Enregistrer justification</button>
+      </div>
+
+      <button onclick="sauvegarderCommentaire()">Sauvegarder commentaire</button>
+      <button onclick="retourListe()">Retour</button>
+    </div>
+  </div>
+
+<script>
+  let eleves = JSON.parse(localStorage.getItem('classe3')) || [
+    { nom: 'Noah', commentaires: '' },
+    { nom: 'Léa', commentaires: '' }
+  ];
+  let appels = JSON.parse(localStorage.getItem('appels3')) || [];
+  let eleveActif = null;
+  let absenceSelectionnee = null;
+
+  function enregistrerEleves() {
+    localStorage.setItem('classe3', JSON.stringify(eleves));
+  }
+  function enregistrerAppels() {
+    localStorage.setItem('appels3', JSON.stringify(appels));
+  }
+
+  function getCouleurNom(eleve) {
+    const absencesNonJustifiees = appels.filter(appel =>
+      appel.nom === eleve.nom &&
+      (appel.statut === 'Absent' || appel.statut === 'Retard') &&
+      !appel.justifie
+    );
+    if (absencesNonJustifiees.length > 0) return 'red';
+    if (eleve.commentaires && eleve.commentaires.trim() !== '') return 'green';
+    return 'black';
+  }
+
+  function afficherListe() {
+    const container = document.getElementById('elevesList');
+    container.innerHTML = '';
+    eleves.forEach((eleve, i) => {
+      const div = document.createElement('div');
+      div.className = 'eleve';
+      div.innerHTML = `
+        <span onclick="ouvrirDetails(${i})" style="color: ${getCouleurNom(eleve)};">${eleve.nom}</span>
+        <button onclick="supprimerEleve(${i})">🗑️</button>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function ouvrirDetails(index) {
+    eleveActif = index;
+    const eleve = eleves[index];
+    document.getElementById('eleveNom').textContent = eleve.nom;
+    document.getElementById('commentaire').value = eleve.commentaires || '';
+    document.getElementById('details').style.display = 'block';
+    document.getElementById('elevesList').style.display = 'none';
+
+    afficherAbsencesNonJustifiees(eleve.nom);
+    cacherJustificationForm();
+  }
+
+  function retourListe() {
+    document.getElementById('details').style.display = 'none';
+    document.getElementById('elevesList').style.display = 'flex';
+    afficherListe();
+  }
+
+  function sauvegarderCommentaire() {
+    eleves[eleveActif].commentaires = document.getElementById('commentaire').value;
+    enregistrerEleves();
+    alert('Commentaire sauvegardé.');
+    retourListe();
+  }
+
+  function afficherAbsencesNonJustifiees(nomEleve) {
+    const div = document.getElementById('absencesNonJustifiees');
+    div.innerHTML = '';
+    const absences = appels.filter(appel =>
+      appel.nom === nomEleve &&
+      (appel.statut === 'Absent' || appel.statut === 'Retard') &&
+      !appel.justifie
+    );
+    if (absences.length === 0) {
+      div.textContent = "Aucune absence ou retard non justifié.";
+      return;
+    }
+
+    absences.forEach((absence, i) => {
+      const absDiv = document.createElement('div');
+      absDiv.style.borderBottom = '1px solid #ccc';
+      absDiv.style.padding = '5px 0';
+      absDiv.innerHTML = `
+        <b>Date:</b> ${absence.date} | <b>Horaire:</b> ${absence.horaire} | <b>Motif:</b> ${absence.motif || '(aucun)'}
+        <button onclick="selectionnerAbsence(${i})" style="margin-left:10px;">Justifier</button>
+      `;
+      div.appendChild(absDiv);
+    });
+  }
+
+  function selectionnerAbsence(indexAbsence) {
+    const nomEleve = eleves[eleveActif].nom;
+    const absences = appels.filter(appel =>
+      appel.nom === nomEleve &&
+      (appel.statut === 'Absent' || appel.statut === 'Retard') &&
+      !appel.justifie
+    );
+    absenceSelectionnee = absences[indexAbsence];
+    if (!absenceSelectionnee) return;
+
+    document.getElementById('justificationForm').style.display = 'block';
+    document.getElementById('dateJustif').value = absenceSelectionnee.date;
+    document.getElementById('motifJustif').value = absenceSelectionnee.motif || '';
+  }
+
+  function cacherJustificationForm() {
+    document.getElementById('justificationForm').style.display = 'none';
+    absenceSelectionnee = null;
+  }
+
+  function enregistrerJustification() {
+    if (!absenceSelectionnee) {
+      alert('Veuillez sélectionner une absence ou un retard à justifier.');
+      return;
+    }
+    const dateJustif = document.getElementById('dateJustif').value;
+    const motifJustif = document.getElementById('motifJustif').value.trim();
+    if (!dateJustif || !motifJustif) {
+      alert('Veuillez remplir la date et le motif de justification.');
+      return;
+    }
+
+    for(let i=0; i < appels.length; i++) {
+      if (
+        appels[i].nom === absenceSelectionnee.nom &&
+        appels[i].date === absenceSelectionnee.date &&
+        appels[i].horaire === absenceSelectionnee.horaire &&
+        appels[i].statut === absenceSelectionnee.statut &&
+        appels[i].justifie === absenceSelectionnee.justifie
+      ) {
+        appels[i].justifie = true;
+        appels[i].date = dateJustif;
+        appels[i].motif = motifJustif;
+        break;
+      }
+    }
+    enregistrerAppels();
+    alert('Justification enregistrée.');
+    afficherAbsencesNonJustifiees(eleves[eleveActif].nom);
+    cacherJustificationForm();
+    retourListe();
+  }
+
+  function ajouterEleve() {
+    const nom = prompt('Nom du nouvel élève :');
+    if (nom) {
+      eleves.push({ nom, commentaires: '' });
+      enregistrerEleves();
+      afficherListe();
+    }
+  }
+
+  function supprimerEleve(index) {
+    if (confirm(`Supprimer ${eleves[index].nom} ?`)) {
+      eleves.splice(index, 1);
+      enregistrerEleves();
+      afficherListe();
+    }
+  }
+
+  afficherListe();
+</script>
+</body>
+</html>
