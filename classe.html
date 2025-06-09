@@ -75,20 +75,43 @@
     </div>
   </div>
 
-<script>
-  let eleves = JSON.parse(localStorage.getItem('classe1')) || [
-    { nom: 'Thomas', commentaires: '' },
-    { nom: 'Emma', commentaires: '' }
-  ];
-  let appels = JSON.parse(localStorage.getItem('appels')) || [];
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, query, where } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDgNJhpLCW3GvJAlG8KAQwFJnVpLAB0dhM",
+    authDomain: "cvadmin-731f2.firebaseapp.com",
+    projectId: "cvadmin-731f2",
+    storageBucket: "cvadmin-731f2.appspot.com",
+    messagingSenderId: "525304173372",
+    appId: "1:525304173372:web:53bd904b144f1d431a0439",
+    measurementId: "G-J6KD6KZPFZ"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  let eleves = [];
+  let appels = [];
   let eleveActif = null;
   let absenceSelectionnee = null;
 
-  function enregistrerEleves() {
-    localStorage.setItem('classe1', JSON.stringify(eleves));
-  }
-  function enregistrerAppels() {
-    localStorage.setItem('appels', JSON.stringify(appels));
+  async function chargerDonnees() {
+    eleves = [];
+    appels = [];
+
+    const elevesSnap = await getDocs(collection(db, "classe1"));
+    elevesSnap.forEach(doc => {
+      eleves.push({ id: doc.id, ...doc.data() });
+    });
+
+    const appelsSnap = await getDocs(collection(db, "appels"));
+    appelsSnap.forEach(doc => {
+      appels.push({ id: doc.id, ...doc.data() });
+    });
+
+    afficherListe();
   }
 
   function getCouleurNom(eleve) {
@@ -116,7 +139,7 @@
     });
   }
 
-  function ouvrirDetails(index) {
+  window.ouvrirDetails = function(index) {
     eleveActif = index;
     const eleve = eleves[index];
     document.getElementById('eleveNom').textContent = eleve.nom;
@@ -128,15 +151,16 @@
     cacherJustificationForm();
   }
 
-  function retourListe() {
+  window.retourListe = function() {
     document.getElementById('details').style.display = 'none';
     document.getElementById('elevesList').style.display = 'flex';
     afficherListe();
   }
 
-  function sauvegarderCommentaire() {
-    eleves[eleveActif].commentaires = document.getElementById('commentaire').value;
-    enregistrerEleves();
+  window.sauvegarderCommentaire = async function() {
+    const eleve = eleves[eleveActif];
+    eleve.commentaires = document.getElementById('commentaire').value;
+    await setDoc(doc(db, "classe1", eleve.id), eleve);
     alert('Commentaire sauvegardé.');
     retourListe();
   }
@@ -166,7 +190,7 @@
     });
   }
 
-  function selectionnerAbsence(indexAbsence) {
+  window.selectionnerAbsence = function(indexAbsence) {
     const nomEleve = eleves[eleveActif].nom;
     const absences = appels.filter(appel =>
       appel.nom === nomEleve &&
@@ -174,8 +198,6 @@
       !appel.justifie
     );
     absenceSelectionnee = absences[indexAbsence];
-    if (!absenceSelectionnee) return;
-
     document.getElementById('justificationForm').style.display = 'block';
     document.getElementById('dateJustif').value = absenceSelectionnee.date;
     document.getElementById('motifJustif').value = absenceSelectionnee.motif || '';
@@ -186,57 +208,46 @@
     absenceSelectionnee = null;
   }
 
-  function enregistrerJustification() {
-    if (!absenceSelectionnee) {
-      alert('Veuillez sélectionner une absence ou un retard à justifier.');
-      return;
-    }
+  window.enregistrerJustification = async function() {
+    if (!absenceSelectionnee) return;
     const dateJustif = document.getElementById('dateJustif').value;
     const motifJustif = document.getElementById('motifJustif').value.trim();
     if (!dateJustif || !motifJustif) {
-      alert('Veuillez remplir la date et le motif de justification.');
+      alert("Veuillez remplir les champs.");
       return;
     }
 
-    for(let i=0; i < appels.length; i++) {
-      if (
-        appels[i].nom === absenceSelectionnee.nom &&
-        appels[i].date === absenceSelectionnee.date &&
-        appels[i].horaire === absenceSelectionnee.horaire &&
-        appels[i].statut === absenceSelectionnee.statut &&
-        appels[i].justifie === absenceSelectionnee.justifie
-      ) {
-        appels[i].justifie = true;
-        appels[i].date = dateJustif;
-        appels[i].motif = motifJustif;
-        break;
-      }
+    const appelDoc = appels.find(appel => appel.id === absenceSelectionnee.id);
+    if (appelDoc) {
+      appelDoc.justifie = true;
+      appelDoc.date = dateJustif;
+      appelDoc.motif = motifJustif;
+      await setDoc(doc(db, "appels", appelDoc.id), appelDoc);
     }
-    enregistrerAppels();
-    alert('Justification enregistrée.');
-    afficherAbsencesNonJustifiees(eleves[eleveActif].nom);
-    cacherJustificationForm();
+
+    alert("Justification enregistrée.");
+    await chargerDonnees();
     retourListe();
   }
 
-  function ajouterEleve() {
-    const nom = prompt('Nom du nouvel élève :');
-    if (nom) {
-      eleves.push({ nom, commentaires: '' });
-      enregistrerEleves();
-      afficherListe();
-    }
+  window.ajouterEleve = async function() {
+    const nom = prompt("Nom du nouvel élève :");
+    if (!nom) return;
+    const docRef = await addDoc(collection(db, "classe1"), {
+      nom,
+      commentaires: ""
+    });
+    await chargerDonnees();
   }
 
-  function supprimerEleve(index) {
-    if (confirm(`Supprimer ${eleves[index].nom} ?`)) {
-      eleves.splice(index, 1);
-      enregistrerEleves();
-      afficherListe();
-    }
+  window.supprimerEleve = async function(index) {
+    if (!confirm("Supprimer cet élève ?")) return;
+    const eleve = eleves[index];
+    await deleteDoc(doc(db, "classe1", eleve.id));
+    await chargerDonnees();
   }
 
-  afficherListe();
+  chargerDonnees();
 </script>
 </body>
 </html>
